@@ -7,6 +7,7 @@ package main
 import (
   "fmt"
   "image/color"
+  "math"
   "os"
 
   "gonum.org/v1/plot"
@@ -35,7 +36,7 @@ Outer:
         count++
         if count == 200 {
           histogram[sum]++
-          v = append(v, float64(sum))
+          v = append(v, float64(sum) - 100)
           samples++
           if samples == 30000 {
             break Outer
@@ -48,6 +49,16 @@ Outer:
   }
   fmt.Println(histogram)
 
+  s, ss, length := 0.0, 0.0, float64(len(v))
+  for _, value := range v {
+    s += value
+    ss += value * value
+  }
+  std := math.Sqrt((ss - s*s/length) / length)
+  for i, value := range v {
+    v[i] = value / std
+  }
+
 	p, err := plot.New()
 	if err != nil {
 		panic(err)
@@ -58,7 +69,7 @@ Outer:
 	if err != nil {
 		panic(err)
 	}
-	h.Normalize(1)
+	h.Normalize(.3)
 	p.Add(h)
 
 	norm := plotter.NewFunction(distuv.UnitNormal.Prob)
