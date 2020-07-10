@@ -5,6 +5,8 @@
 package main
 
 import (
+  "encoding/gob"
+  "flag"
   "fmt"
   "image/color"
   "math"
@@ -16,7 +18,11 @@ import (
 	"github.com/gonum/stat/distuv"
 )
 
+var Samples = flag.Int("samples", 30000, "number of samples to take")
+
 func main() {
+  flag.Parse()
+
   input, err := os.Open("/dev/TrueRNG")
   if err != nil {
     panic(err)
@@ -38,7 +44,7 @@ Outer:
           histogram[sum]++
           v = append(v, float64(sum) - 100)
           samples++
-          if samples == 30000 {
+          if samples == *Samples {
             break Outer
           }
           sum, count = 0, 0
@@ -48,6 +54,17 @@ Outer:
     n, err = input.Read(buffer)
   }
   fmt.Println(histogram)
+
+  output, err := os.Create("histogram.bin")
+  if err != nil {
+    panic(err)
+  }
+  defer output.Close()
+  encoder := gob.NewEncoder(output)
+  err = encoder.Encode(histogram)
+  if err != nil {
+    panic(err)
+  }
 
   s, ss, length := 0.0, 0.0, float64(len(v))
   for _, value := range v {
