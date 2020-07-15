@@ -18,19 +18,22 @@ import (
 	"github.com/gonum/stat/distuv"
 )
 
-var Samples = flag.Int("samples", 30000, "number of samples to take")
+var (
+  // Samples number of sample to take
+  Samples = flag.Int("samples", 1024*1024, "number of samples to take")
+)
 
-func main() {
-  flag.Parse()
-
+// GetSamples gets samples from the rng
+func GetSamples() ([200]uint64, plotter.Values) {
   input, err := os.Open("/dev/TrueRNG")
   if err != nil {
     panic(err)
   }
+  defer input.Close()
   buffer := make([]byte, 256)
   n, err := input.Read(buffer)
   histogram, sum, count, samples := [200]uint64{}, 0, 0, 0
-  v := make(plotter.Values, 0, 256)
+  v := make(plotter.Values, 0, *Samples)
 Outer:
   for err == nil {
     for _, b := range buffer[:n] {
@@ -53,6 +56,14 @@ Outer:
     }
     n, err = input.Read(buffer)
   }
+
+  return histogram, v
+}
+
+func main() {
+  flag.Parse()
+
+  histogram, v := GetSamples()
   fmt.Println(histogram)
 
   output, err := os.Create("histogram.bin")
