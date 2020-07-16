@@ -11,6 +11,7 @@ import (
   "image/color"
   "math"
   "os"
+  "time"
 
   "gonum.org/v1/plot"
 	"gonum.org/v1/plot/plotter"
@@ -21,6 +22,8 @@ import (
 var (
   // Samples number of sample to take
   Samples = flag.Int("samples", 1024*1024, "number of samples to take")
+  // Experiment experiment mode
+  Experiment = flag.Bool("experiment", false, "experiment mode")
 )
 
 // GetSamples gets samples from the rng
@@ -63,8 +66,38 @@ Outer:
 func main() {
   flag.Parse()
 
+  if *Experiment {
+    start := time.Now()
+    reference := [200]uint64{}
+    input, err := os.Open("histogram.bin")
+    if err != nil {
+      panic(err)
+    }
+    defer input.Close()
+    decoder := gob.NewDecoder(input)
+    err = decoder.Decode(&reference)
+    if err != nil {
+      panic(err)
+    }
+    histogram, _ := GetSamples()
+    difference, sum := 0, 0
+    for i, value := range histogram {
+      sum += int(reference[i])
+      d := int(reference[i]) - int(value)
+      if d < 0 {
+        d = -d
+      }
+      difference += d
+    }
+    fmt.Println("score", float64(difference)/float64(sum))
+    fmt.Println(time.Now().Sub(start))
+    return
+  }
+
+  start := time.Now()
   histogram, v := GetSamples()
   fmt.Println(histogram)
+  fmt.Println(time.Now().Sub(start))
 
   output, err := os.Create("histogram.bin")
   if err != nil {
