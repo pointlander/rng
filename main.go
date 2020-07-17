@@ -16,6 +16,7 @@ import (
   "gonum.org/v1/plot"
 	"gonum.org/v1/plot/plotter"
 	"gonum.org/v1/plot/vg"
+  "gonum.org/v1/gonum/integrate"
 	"github.com/gonum/stat/distuv"
 )
 
@@ -63,6 +64,16 @@ Outer:
   return histogram, v
 }
 
+func y(s, x float64) float64 {
+  xx, f := make([]float64, 1000), make([]float64, 1000)
+  step, t := x / 1000, 0.0
+  for i := 0; i < 1000; i++ {
+    xx[i], f[i] = t, math.Pow(t, s-1) * math.Exp(-t)
+    t += step
+  }
+  return integrate.Trapezoidal(xx, f)
+}
+
 func main() {
   flag.Parse()
 
@@ -80,16 +91,18 @@ func main() {
       panic(err)
     }
     histogram, _ := GetSamples()
-    difference, sum := 0, 0
-    for i, value := range histogram {
-      sum += int(reference[i])
-      d := int(reference[i]) - int(value)
-      if d < 0 {
-        d = -d
+    x2 := 0.0
+    for i, x := range histogram {
+      m := float64(reference[i])
+      d := float64(x) - m
+      if m != 0 {
+        x2 += d*d/m
       }
-      difference += d
     }
-    fmt.Println("score", float64(difference)/float64(sum))
+    fmt.Println("X^2", x2)
+    k := float64(200)
+    pvalue := 1 - y(k/2, x2/2)/math.Gamma(k/2)
+    fmt.Println("P-value", pvalue)
     fmt.Println(time.Now().Sub(start))
     return
   }

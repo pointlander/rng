@@ -10,5 +10,6 @@ require (
 	github.com/gonum/mathext v0.0.0-20181121095525-8a4bf007ea55 // indirect
 	github.com/gonum/matrix v0.0.0-20181209220409-c518dec07be9 // indirect
 	github.com/gonum/stat v0.0.0-20181125101827-41a0da705a5b
+	gonum.org/v1/gonum v0.0.0-20180816165407-929014505bf4
 	gonum.org/v1/plot v0.7.0
 )
