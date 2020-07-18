@@ -12,6 +12,7 @@ import (
   "math"
   "os"
   "time"
+  "io/ioutil"
 
   "gonum.org/v1/plot"
 	"gonum.org/v1/plot/plotter"
@@ -28,7 +29,7 @@ var (
 )
 
 // GetSamples gets samples from the rng
-func GetSamples() ([200]uint64, plotter.Values) {
+func GetSamples() ([200]uint64, []byte, plotter.Values) {
   input, err := os.Open("/dev/TrueRNG")
   if err != nil {
     panic(err)
@@ -36,7 +37,7 @@ func GetSamples() ([200]uint64, plotter.Values) {
   defer input.Close()
   buffer := make([]byte, 256)
   n, err := input.Read(buffer)
-  histogram, sum, count, samples := [200]uint64{}, 0, 0, 0
+  histogram, sum, count, samples := [200]uint64{}, 0, 0, make([]byte, 0, *Samples)
   v := make(plotter.Values, 0, *Samples)
 Outer:
   for err == nil {
@@ -50,8 +51,8 @@ Outer:
         if count == 200 {
           histogram[sum]++
           v = append(v, float64(sum) - 100)
-          samples++
-          if samples == *Samples {
+          samples = append(samples, byte(sum))
+          if len(samples) == *Samples {
             break Outer
           }
           sum, count = 0, 0
@@ -61,7 +62,7 @@ Outer:
     n, err = input.Read(buffer)
   }
 
-  return histogram, v
+  return histogram, samples, v
 }
 
 func y(s, x float64) float64 {
@@ -90,7 +91,7 @@ func main() {
     if err != nil {
       panic(err)
     }
-    histogram, _ := GetSamples()
+    histogram, _, _ := GetSamples()
     x2 := 0.0
     for i, x := range histogram {
       m := float64(reference[i])
@@ -108,7 +109,7 @@ func main() {
   }
 
   start := time.Now()
-  histogram, v := GetSamples()
+  histogram, samples, v := GetSamples()
   fmt.Println(histogram)
   fmt.Println(time.Now().Sub(start))
 
@@ -119,6 +120,11 @@ func main() {
   defer output.Close()
   encoder := gob.NewEncoder(output)
   err = encoder.Encode(histogram)
+  if err != nil {
+    panic(err)
+  }
+
+  err = ioutil.WriteFile("samples.bin", samples, 0644)
   if err != nil {
     panic(err)
   }
